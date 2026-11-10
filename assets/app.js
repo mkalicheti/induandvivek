@@ -38,7 +38,7 @@
   ];
   /* ========================================================== */
 
-  // "Whose side are you on?" (optional). label goes to the Google Sheet.
+  // "Which side are you from?" (optional). label goes to the Google Sheet.
   var SIDES = [
     { id: 'bride', en: 'Indu\u2019s side', te: 'ఆడపెళ్ళివారు', sub: 'Bride\u2019s family & friends', label: 'Indu\u2019s side (bride)' },
     { id: 'groom', en: 'Vivek\u2019s side', te: 'మగపెళ్ళివారు', sub: 'Groom\u2019s family & friends', label: 'Vivek\u2019s side (groom)' },
@@ -405,7 +405,7 @@
       '<p class="step-intro">You will add anyone coming with you on the next step.</p>' +
       '<div class="field' + (errors.name ? ' invalid' : '') + '"><label for="rsvp-name">Your full name</label>' +
       '<input type="text" id="rsvp-name" data-field="name" autocomplete="name" autocapitalize="words" value="' + esc(state.name) + '"' + invalid('name') + describedBy('name') + '>' + fieldErr('name') + '</div>' +
-      '<fieldset class="side"><legend>Whose side are you on? <span class="opt">(optional)</span></legend>' +
+      '<fieldset class="side"><legend>Which side are you from? <span class="opt">(optional)</span></legend>' +
       '<div class="side-opts">' + SIDES.map(function (s) {
         return '<button type="button" class="side-btn' + (s.id === 'both' ? ' both' : '') + '" data-side="' + s.id + '" aria-pressed="' + (state.side === s.id) + '">' +
           '<span class="s-en">' + esc(s.en) + '</span><span class="s-te" lang="te">' + esc(s.te) + '</span>' +
