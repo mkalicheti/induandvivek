@@ -443,3 +443,19 @@ body.has-picker { padding-bottom: 120px; }
 .hotel-bookby, .hotel-note { font-size: .98rem; color: var(--muted); }
 .hotel-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; width: 100%; }
 .hotel-actions .btn { min-height: 52px; font-size: 1.02rem; }
+
+/* ---------- "Whose side are you on?" (RSVP step 1, optional) ---------- */
+.side { border: 0; margin: 0 0 22px; padding: 0; min-width: 0; }
+.side legend { font-weight: 700; font-size: 1.05rem; padding: 0; margin-bottom: 10px; }
+.side legend .opt { font-weight: 400; color: var(--muted); }
+.side-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.side-btn {
+  display: grid; gap: 2px; justify-items: center; align-content: center; text-align: center; padding: 14px 8px; min-height: 96px;
+  border: 2px solid var(--line); border-radius: 16px; background: #FFFFFF; color: var(--ink); cursor: pointer; font-family: var(--body);
+}
+.side-btn .s-en { font: 400 calc(1.25rem * var(--display-size))/1.15 var(--display); color: var(--accent); }
+.side-btn .s-te { font-family: var(--telugu); font-size: 1.2rem; line-height: 1.2; }
+.side-btn .s-sub { font-size: .82rem; color: var(--muted); }
+.side-btn.both { grid-column: 1 / -1; min-height: 60px; grid-auto-flow: column; justify-content: center; align-items: baseline; gap: 12px; }
+.side-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.side-btn[aria-pressed="true"] .s-en::before { content: "\2713  "; }

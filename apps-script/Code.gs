@@ -30,7 +30,7 @@ const LATEST = 'Guest List (latest)';
 const QUEUE = 'Email Queue';
 const HEADERS = ['Submitted At', 'Confirmation #', 'Status', 'Contact Name', 'Email', 'Mobile', 'Guest Name', 'Adult/Child']
   .concat(EVENTS.map(e => e.header))
-  .concat(['Message']);
+  .concat(['Message', 'Side']);
 const COL = { status: 3, email: 5 };
 const QUEUE_HEADERS = ['Queued At', 'Confirmation #', 'To', 'Subject', 'Body (HTML)', 'Status', 'Sent At', 'Last Error'];
 
@@ -68,9 +68,16 @@ function setup() {
   rows.push(['RSVPs received (families)', `=IFERROR(COUNTUNIQUE(FILTER(${r}B2:B,${r}C2:C="Active")),0)`, '', '', '']);
   rows.push(['Guests listed', `=COUNTIF(${r}C:C,"Active")`, '', '', '']);
   rows.push(['Confirmation emails waiting', `=COUNTIF('${QUEUE}'!F:F,"Pending")`, '', '', '']);
+  const sc = colLetter(HEADERS.length); // Side column
+  rows.push(['', '', '', '', '']);
+  rows.push(['Guests by side', 'Guests listed', '', '', '']);
+  ['Indu\u2019s side (bride)', 'Vivek\u2019s side (groom)', 'Both'].forEach(s =>
+    rows.push([s, `=COUNTIFS(${r}C:C,"Active",${r}${sc}:${sc},"${s}")`, '', '', '']));
+  rows.push(['No answer', `=COUNTIFS(${r}C:C,"Active",${r}${sc}:${sc},"")`, '', '', '']);
   sum.getRange(1, 1, rows.length, 5).setValues(rows);
   sum.getRange('A1').setFontWeight('bold').setFontSize(14);
   sum.getRange('A2:E2').setFontWeight('bold').setBackground('#F8EEDF');
+  sum.getRange(rows.length - 4, 1, 1, 2).setFontWeight('bold').setBackground('#F8EEDF');
   sum.setColumnWidth(1, 240);
 
   const latest = ss.getSheetByName(LATEST) || ss.insertSheet(LATEST);
@@ -127,6 +134,7 @@ function doPost(e) {
     const now = new Date();
     const id = clean(data.submissionId, 20) || ('IV-' + Utilities.getUuid().slice(0, 6).toUpperCase());
     const message = clean(data.message, 2000);
+    const side = clean(data.side, 40);
     const cleanGuests = guests.map(g => ({
       name: clean(g.name, 120),
       type: g.type === 'Child' ? 'Child' : 'Adult',
@@ -135,10 +143,10 @@ function doPost(e) {
     const rows = cleanGuests.map(g =>
       [now, id, 'Active', name, email, phone, g.name, g.type]
         .concat(EVENTS.map(ev => g.rsvp[ev.id]))
-        .concat([message]));
+        .concat([message, side]));
     sh.getRange(last + 1, 1, rows.length, HEADERS.length).setValues(rows);
 
-    const r = { id, name, email, phone, guests: cleanGuests, message, replaced };
+    const r = { id, name, email, phone, guests: cleanGuests, message, side, replaced };
     sendOrQueue(id, email, 'Your RSVP for Indu & Vivek’s wedding (' + id + ')', guestEmailHtml(r));
     if (NOTIFY_EMAIL) sendOrQueue(id, NOTIFY_EMAIL, `${replaced ? 'Updated' : 'New'} RSVP: ${name} (${cleanGuests.length}) ${id}`, ownerEmailHtml(r));
 
@@ -202,6 +210,7 @@ function guestEmailHtml(r) {
     `<p>Dear ${esc(r.name)},</p>` +
     `<p>Thank you for your RSVP. ${attendingAny ? 'We can’t wait to celebrate with you!' : 'We’ll miss you, and we’re grateful you let us know.'}</p>` +
     `<p><b>Confirmation number:</b> ${esc(r.id)}</p>` +
+    (r.side ? `<p><b>Side:</b> ${esc(r.side)}</p>` : '') +
     rsvpTable(r.guests) +
     (events.length ? '<p style="margin-top:20px">' + events.map(ev => `<b>${esc(ev.header)}</b><br>${esc(ev.when)}<br>${esc(ev.where)}`).join('<br><br>') + '</p>' : '') +
     `<p>Need to change something? Fill out the RSVP again at <a href="${SITE_URL}/#rsvp">${SITE_URL.replace('https://', '')}</a> using this same email address. We will use your newest answer.</p>` +
@@ -211,6 +220,7 @@ function guestEmailHtml(r) {
 function ownerEmailHtml(r) {
   return `<p><b>${esc(r.name)}</b> · ${esc(r.email)}${r.phone ? ' · ' + esc(r.phone) : ''} · ${esc(r.id)}${r.replaced ? ' · <b>replaces an earlier RSVP</b>' : ''}</p>` +
     rsvpTable(r.guests) +
+    (r.side ? `<p><b>Side:</b> ${esc(r.side)}</p>` : '') +
     (r.message ? `<p><b>Message:</b> ${esc(r.message)}</p>` : '');
 }
 

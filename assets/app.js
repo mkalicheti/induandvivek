@@ -38,6 +38,14 @@
   ];
   /* ========================================================== */
 
+  // "Whose side are you on?" (optional). label goes to the Google Sheet.
+  var SIDES = [
+    { id: 'bride', en: 'Indu\u2019s side', te: 'ఆడపెళ్ళివారు', sub: 'Bride\u2019s family & friends', label: 'Indu\u2019s side (bride)' },
+    { id: 'groom', en: 'Vivek\u2019s side', te: 'మగపెళ్ళివారు', sub: 'Groom\u2019s family & friends', label: 'Vivek\u2019s side (groom)' },
+    { id: 'both', en: 'Both!', te: 'ఇద్దరూ మావాళ్ళే', sub: '', label: 'Both' }
+  ];
+  function sideLabel(id) { var s = SIDES.filter(function (x) { return x.id === id; })[0]; return s ? s.label : ''; }
+
   var COUNTRIES = [
     ['+91', 'India +91'], ['+1', 'USA / Canada +1'], ['+44', 'UK +44'], ['+61', 'Australia +61'],
     ['+64', 'New Zealand +64'], ['+65', 'Singapore +65'], ['+971', 'UAE +971'], ['+974', 'Qatar +974'],
@@ -271,7 +279,7 @@
   function newId() { counter += 1; return 'p' + Date.now().toString(36) + counter; }
 
   function freshState() {
-    return { step: 1, name: '', phoneCode: '+91', phone: '', email: '', emailChecked: '', website: '', people: [{ id: 'me', name: '', child: false }], confirmed: false, rsvp: {}, message: '' };
+    return { step: 1, name: '', phoneCode: '+91', phone: '', email: '', emailChecked: '', website: '', people: [{ id: 'me', name: '', child: false }], confirmed: false, rsvp: {}, message: '', side: '' };
   }
   function loadDraft() {
     try {
@@ -279,6 +287,7 @@
       if (s && Array.isArray(s.people) && s.people.length && s.rsvp) {
         if (!(s.step >= 1 && s.step <= 5)) s.step = 1;
         if (!s.phoneCode) s.phoneCode = '+91';
+        if (!s.side) s.side = '';
         return s;
       }
     } catch (e) { /* ignore */ }
@@ -396,6 +405,12 @@
       '<p class="step-intro">You will add anyone coming with you on the next step.</p>' +
       '<div class="field' + (errors.name ? ' invalid' : '') + '"><label for="rsvp-name">Your full name</label>' +
       '<input type="text" id="rsvp-name" data-field="name" autocomplete="name" autocapitalize="words" value="' + esc(state.name) + '"' + invalid('name') + describedBy('name') + '>' + fieldErr('name') + '</div>' +
+      '<fieldset class="side"><legend>Whose side are you on? <span class="opt">(optional)</span></legend>' +
+      '<div class="side-opts">' + SIDES.map(function (s) {
+        return '<button type="button" class="side-btn' + (s.id === 'both' ? ' both' : '') + '" data-side="' + s.id + '" aria-pressed="' + (state.side === s.id) + '">' +
+          '<span class="s-en">' + esc(s.en) + '</span><span class="s-te" lang="te">' + esc(s.te) + '</span>' +
+          (s.sub ? '<span class="s-sub">' + esc(s.sub) + '</span>' : '') + '</button>';
+      }).join('') + '</div></fieldset>' +
       '<div class="field' + (errors.email ? ' invalid' : '') + '"><label for="rsvp-email">Your email address</label>' +
       '<p class="hint" id="hint-email">We will email your RSVP confirmation here. To change your RSVP later, fill this form again with the same email.</p>' +
       '<input type="email" id="rsvp-email" data-field="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" value="' + esc(state.email) + '"' + invalid('email') + describedBy('email', 'hint-email') + '>' + emailError() + '</div>' +
@@ -490,6 +505,7 @@
       reviewTable() +
       '<p style="margin-bottom:16px"><button type="button" class="edit-link" data-goto="2">Change who is coming</button> &nbsp;·&nbsp; <button type="button" class="edit-link" data-goto="3">Change answers</button></p>' +
       '<dl class="summary-list">' +
+      (state.side ? '<div><dt>Side</dt><dd>' + esc(sideLabel(state.side)) + ' <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' : '') +
       '<div><dt>Confirmation email to</dt><dd><strong>' + esc(state.email.trim()) + '</strong> <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' +
       (fullPhone() ? '<div><dt>Mobile</dt><dd>' + esc(fullPhone()) + '</dd></div>' : '') +
       (state.message ? '<div><dt>Message</dt><dd>' + esc(state.message) + '</dd></div>' : '') +
@@ -587,6 +603,13 @@
     if (action === 'back') { goTo(state.step - 1); return; }
     if (action === 'restart') { state = freshState(); store(DRAFT_KEY, null); goTo(1); return; }
     if (action === 'fix-email') { state.email = emailFix(state.email); delete errors.email; render('#rsvp-email'); return; }
+    if (t.dataset.side) {
+      state.side = state.side === t.dataset.side ? '' : t.dataset.side;
+      var sb = app.querySelectorAll('.side-btn');
+      for (var si = 0; si < sb.length; si++) sb[si].setAttribute('aria-pressed', String(sb[si].dataset.side === state.side));
+      saveDraft();
+      return;
+    }
     if (action === 'keep-email') { state.emailChecked = state.email.trim(); delete errors.email; render('#rsvp-email'); return; }
     if (action === 'add') {
       var id = newId();
@@ -638,6 +661,7 @@
         return { name: (p.id === 'me' ? state.name : p.name).trim(), type: p.child ? 'Child' : 'Adult', isContact: p.id === 'me', rsvp: rsvp };
       }),
       message: state.message.trim(),
+      side: sideLabel(state.side),
       website: state.website
     };
 
