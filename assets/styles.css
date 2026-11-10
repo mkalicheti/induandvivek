@@ -153,6 +153,9 @@ p { margin: 0; }
   line-height: 1.02; margin-top: 6px; color: var(--names); letter-spacing: .01em;
 }
 .names .amp { color: var(--gold); font-size: .62em; padding: 0 .12em; }
+/* Small "aka Manvitha" caption under Indu; the heading's line height is unchanged */
+.names .nm { display: inline-grid; justify-items: center; }
+.names .aka { font: italic 400 .95rem/1.2 var(--body); letter-spacing: .06em; color: var(--muted); margin-top: 2px; }
 .hero-te-names { font-size: 1.7rem; line-height: 1.3; color: var(--muted); }
 .hero-muggu { width: 68px; height: 50px; margin: 18px 0 6px; }
 .hero-date { font-family: var(--display); font-size: 1.55rem; color: var(--ink); }
