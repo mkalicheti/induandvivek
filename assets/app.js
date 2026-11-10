@@ -18,7 +18,7 @@
 
   var EVENTS = [
     { id: 'welcome_dinner', name: 'Welcome Dinner', te: 'స్వాగత విందు', when: 'Wednesday, February 24 · 6:00 PM onwards' },
-    { id: 'wedding', name: 'Wedding Ceremony', te: 'వివాహ మహోత్సవం', when: 'Thursday, February 25 · Muhurtham 11:03 AM' }
+    { id: 'wedding', name: 'Wedding Ceremony', te: 'వివాహ ఉత్సవం', when: 'Thursday, February 25 · Muhurtham 11:03 AM' }
   ];
   // Hotel room blocks. Leave the list empty to show "We are finalizing..." on the site.
   // Copy the example below once per hotel, remove the // at the start of each line, and fill it in.
