@@ -5,7 +5,7 @@
   /* ================== SETTINGS: edit these ================== */
   var CONFIG = {
     // Paste your Google Apps Script web app URL here (see README). Leave empty for preview mode.
-    scriptUrl: '',
+    scriptUrl: 'https://script.google.com/macros/s/AKfycbyzXqwknLhpdG7xvHqPQQNM9YnAZRVucgqjf3S-0NYrE4xRm7ywQvmtkFhT2jgtjvt8OQ/exec',
     // Shown on the page when set, e.g. 'January 10, 2027'
     rsvpDeadline: '',
     // Largest family one RSVP may include
