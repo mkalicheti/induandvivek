@@ -96,7 +96,6 @@ Submit a test RSVP from your phone, check it appears in the sheet, then delete t
 
 ## Things to fill in later
 - Welcome Dinner venue (`index.html`, Events section)
-- Wedding-day calendar link times: currently 9:30 AM–2:30 PM as a placeholder (`index.html`, "Add to calendar" link `dates=`)
 
 ## Muggu and banana leaf artwork
 
