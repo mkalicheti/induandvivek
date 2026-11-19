@@ -258,7 +258,8 @@
 
   /* ---------- RSVP state ---------- */
   var DRAFT_KEY = 'iv-rsvp-draft-v1';
-  var STEPS = ['Your details', 'Who is coming', 'Events', 'Hotel & message', 'Review'];
+  var STEPS = ['Your details', 'Who is coming', 'Events', 'Hotel', 'Message', 'Review'];
+  var REVIEW_STEP = 6, DONE_STEP = 7, HOTEL_STEP = 4;
   var app = document.getElementById('rsvp-app');
   var counter = 0;
   function newId() { counter += 1; return 'p' + Date.now().toString(36) + counter; }
@@ -270,7 +271,7 @@
     try {
       var s = JSON.parse(store(DRAFT_KEY) || 'null');
       if (s && Array.isArray(s.people) && s.people.length && s.rsvp) {
-        if (!(s.step >= 1 && s.step <= 5)) s.step = 1;
+        if (!(s.step >= 1 && s.step <= REVIEW_STEP)) s.step = 1;
         if (!s.phoneCode) s.phoneCode = '+91';
         if (!s.side) s.side = '';
         if (!s.hotel) s.hotel = '';
@@ -283,7 +284,7 @@
   var errors = {};
   var formError = '';
 
-  function saveDraft() { if (state.step <= 5) store(DRAFT_KEY, JSON.stringify(state)); }
+  function saveDraft() { if (state.step <= REVIEW_STEP) store(DRAFT_KEY, JSON.stringify(state)); }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -375,8 +376,9 @@
   function invalid(key) { return errors[key] ? ' aria-invalid="true"' : ''; }
 
   function progress() {
-    var pct = Math.round((state.step / STEPS.length) * 100);
-    return '<div class="progress"><p class="progress-label">Step ' + state.step + ' of ' + STEPS.length + ': ' + STEPS[state.step - 1] + '</p>' +
+    var list = visibleSteps(), n = list.indexOf(state.step) + 1;
+    var pct = Math.round((n / list.length) * 100);
+    return '<div class="progress"><p class="progress-label">Step ' + n + ' of ' + list.length + ': ' + STEPS[state.step - 1] + '</p>' +
       '<div class="progress-bar" aria-hidden="true"><span style="width:' + pct + '%"></span></div></div>';
   }
 
@@ -470,17 +472,27 @@
   }
   function wantsHotel() { return isComing() && HOTELS.length > 0 && state.hotel === 'yes'; }
 
+  function hasHotelStep() { return isComing() && HOTELS.length > 0; }
+  // Count the hotel step until we know nobody in the group is coming (keeps "Step x of 6" steady)
+  function everyoneDeclined() {
+    return state.people.every(function (p) { return EVENTS.every(function (ev) { return state.rsvp[p.id] && state.rsvp[p.id][ev.id] === 'no'; }); });
+  }
+  function visibleSteps() { return HOTELS.length && !everyoneDeclined() ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 5, 6]; }
+
+  function stepHotel() {
+    return '<h3 class="step-title">Will you need a hotel room?</h3>' +
+      '<p class="step-intro">We\u2019ve arranged a special group rate at hotels in Newark. If you choose Yes, we will show you the booking links after you send your RSVP, and email them to you.</p>' +
+      '<div class="side-opts hotel-opts">' +
+      '<button type="button" class="side-btn" data-hotel="yes" aria-pressed="' + (state.hotel === 'yes') + '"><span class="s-en">Yes</span><span class="s-sub">Send me the group-rate booking links</span></button>' +
+      '<button type="button" class="side-btn" data-hotel="no" aria-pressed="' + (state.hotel === 'no') + '"><span class="s-en">No</span><span class="s-sub">I have a place to stay</span></button>' +
+      '</div>' + nav('Next \u2192');
+  }
+
   function step4() {
-    var hotelQ = isComing() && HOTELS.length ? '<fieldset class="side hotel-q"><legend>Would you like links to book a hotel room at our group rate?</legend>' +
-      '<p class="hint">We\u2019ve arranged a special group rate at hotels in Newark. If you choose Yes, we will show you the booking links after you send your RSVP, and email them to you.</p>' +
-      '<div class="yn">' +
-      '<button type="button" class="choice" data-hotel="yes" data-v="yes" aria-pressed="' + (state.hotel === 'yes') + '">✓ Yes, send me the links</button>' +
-      '<button type="button" class="choice" data-hotel="no" data-v="no" aria-pressed="' + (state.hotel === 'no') + '">✕ No, thanks</button>' +
-      '</div></fieldset>' : '';
-    return '<h3 class="step-title">' + (hotelQ ? 'Hotel &amp; message' : 'A message for us') + '</h3>' + hotelQ +
+    return '<h3 class="step-title">A message for us</h3>' +
       '<div class="field"><label for="rsvp-message">A message for Indu &amp; Vivek (optional)</label>' +
       '<textarea id="rsvp-message" data-field="message">' + esc(state.message) + '</textarea></div>' +
-      nav('Review my RSVP →');
+      nav('Review my RSVP \u2192');
   }
 
   function answerTag(v) { return v === 'yes' ? '<span class="yes-tag">✓ Attending</span>' : '<span class="no-tag">✕ Not attending</span>'; }
@@ -502,7 +514,7 @@
       reviewTable() +
       '<p style="margin-bottom:16px"><button type="button" class="edit-link" data-goto="2">Change who is coming</button> &nbsp;·&nbsp; <button type="button" class="edit-link" data-goto="3">Change answers</button></p>' +
       '<dl class="summary-list">' +
-      (isComing() && HOTELS.length ? '<div><dt>Hotel booking links</dt><dd>' + (state.hotel === 'yes' ? 'Yes, please' : 'No, thanks') + ' <button type="button" class="edit-link" data-goto="4">Change</button></dd></div>' : '') +
+      (isComing() && HOTELS.length ? '<div><dt>Hotel booking links</dt><dd>' + (state.hotel === 'yes' ? 'Yes, please' : 'No, thanks') + ' <button type="button" class="edit-link" data-goto="' + HOTEL_STEP + '">Change</button></dd></div>' : '') +
       (state.side ? '<div><dt>Side</dt><dd>' + esc(sideLabel(state.side)) + ' <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' : '') +
       '<div><dt>Confirmation email to</dt><dd><strong>' + esc(state.email.trim()) + '</strong> <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' +
       (fullPhone() ? '<div><dt>Mobile</dt><dd>' + esc(fullPhone()) + '</dd></div>' : '') +
@@ -539,9 +551,9 @@
   var lastHotelLinks = [];
   function render(focusTarget) {
     var body;
-    if (state.step === 6) body = doneView(lastResult);
-    else body = progress() + [step1, step2, step3, step4, step5][state.step - 1]();
-    app.innerHTML = state.step === 6 ? body : '<form novalidate>' + body + '</form>';
+    if (state.step === DONE_STEP) body = doneView(lastResult);
+    else body = progress() + [step1, step2, step3, stepHotel, step4, step5][state.step - 1]();
+    app.innerHTML = state.step === DONE_STEP ? body : '<form novalidate>' + body + '</form>';
     saveDraft();
     if (focusTarget) {
       var el = typeof focusTarget === 'string' ? app.querySelector(focusTarget) : null;
@@ -594,7 +606,7 @@
 
   app.addEventListener('submit', function (e) {
     e.preventDefault();
-    if (state.step === 5) { submit(); return; }
+    if (state.step === REVIEW_STEP) { submit(); return; }
     if (!validateStep(state.step)) { render(); focusFirstError(); return; }
     if (state.step === 1) state.people[0].name = state.name.trim();
     if (state.step === 2) {
@@ -602,14 +614,16 @@
       var ids = state.people.map(function (p) { return p.id; });
       Object.keys(state.rsvp).forEach(function (k) { if (ids.indexOf(k) === -1) delete state.rsvp[k]; });
     }
-    goTo(state.step + 1);
+    var next = state.step + 1;
+    if (next === HOTEL_STEP && !hasHotelStep()) next++;
+    goTo(next);
   });
 
   app.addEventListener('click', function (e) {
     var t = e.target.closest('button');
     if (!t) return;
     var action = t.dataset.action;
-    if (action === 'back') { goTo(state.step - 1); return; }
+    if (action === 'back') { var prev = state.step - 1; if (prev === HOTEL_STEP && !hasHotelStep()) prev--; goTo(prev); return; }
     if (action === 'restart') { lastHotelLinks = []; state = freshState(); store(DRAFT_KEY, null); goTo(1); return; }
     if (action === 'fix-email') { state.email = emailFix(state.email); delete errors.email; render('#rsvp-email'); return; }
     if (t.dataset.hotel) {
@@ -685,7 +699,7 @@
     function finish(result) {
       lastResult = result;
       store(DRAFT_KEY, null);
-      goTo(6);
+      goTo(DONE_STEP);
     }
     function fail() {
       formError = 'Your RSVP was not sent. Please check your internet connection and press “Send my RSVP” again. If it still doesn’t work, please call or message Indu or Vivek.';
