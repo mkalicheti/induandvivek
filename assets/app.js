@@ -248,8 +248,7 @@
     }).join('') + '</div>' +
     '<div class="car-nav"><button type="button" class="car-btn" data-dir="-1" aria-label="Previous hotel">←</button>' +
     '<span class="dots">' + HOTELS.map(function (_, i) { return '<i data-i="' + i + '"' + (i ? '' : ' class="on"') + '></i>'; }).join('') + '</span>' +
-    '<button type="button" class="car-btn" data-dir="1" aria-label="Next hotel">→</button></div>' +
-    '<p class="swipe-hint">Swipe to see all ' + HOTELS.length + ' hotels</p>';
+    '<button type="button" class="car-btn" data-dir="1" aria-label="Next hotel">→</button></div>';
     box.hidden = false;
     var car = box.querySelector('.carousel'), dots = box.querySelectorAll('.dots i');
     function current() { var w = car.firstElementChild.getBoundingClientRect().width + 14; return Math.round(car.scrollLeft / w); }
