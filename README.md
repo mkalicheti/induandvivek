@@ -37,6 +37,25 @@ How the sheet works:
 - Tip: send the RSVP link from the same Gmail address, so guests recognise the sender and the
   confirmation is less likely to land in Spam.
 
+## 1b. Hotel booking links (private)
+
+The hotel cards on the website show rates, room types, breakfast, parking and book-by dates,
+but **no booking links**: this repository is public, and the hotels don't check who books.
+The links are sent only after someone RSVPs as attending: on the thank-you screen and in the
+confirmation email.
+
+The links live in a second Apps Script file that is **not** in this repository:
+
+1. In Apps Script, click **+ (Add a file) → Script** and name it `HotelLinks`.
+2. Paste the `HOTEL_LINKS = [...]` list (kept privately, not here) and press **Save**.
+   The hotel names must match the names in `assets/app.js` (`HOTELS`).
+3. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.**
+4. Once only: choose `emailHotelLinksToEarlierGuests` in the function dropdown and press **Run**.
+   It emails the links to everyone who RSVP'd as attending before the links were added
+   (people who already got them are skipped).
+
+The public hotel details are edited in `HOTELS` at the top of `assets/app.js`.
+
 ## 2. Choose a theme
 
 In `assets/app.js`, set `theme` to `pattu`, `geru`, `aaku` or `gadwal`,
@@ -77,7 +96,6 @@ Submit a test RSVP from your phone, check it appears in the sheet, then delete t
 ## Things to fill in later
 - Welcome Dinner venue (`index.html`, Events section)
 - Wedding-day calendar link times: currently 9:30 AM–2:30 PM as a placeholder (`index.html`, "Add to calendar" link `dates=`)
-- Hotel room block booking details (Travel section, "Stay")
 
 ## Muggu and banana leaf artwork
 

@@ -20,21 +20,20 @@
     { id: 'welcome_dinner', name: 'Welcome Dinner', te: 'స్వాగత విందు', when: 'Wednesday, February 24 · 6:00 PM onwards' },
     { id: 'wedding', name: 'Wedding Ceremony', te: 'వివాహ మహోత్సవం', when: 'Thursday, February 25 · Muhurtham 11:03 AM' }
   ];
-  // Hotel room blocks. Leave the list empty to show "We are finalizing..." on the site.
-  // Copy the example below once per hotel, remove the // at the start of each line, and fill it in.
-  // Any line you don't have yet (code, phone, bookBy...) can simply be left out.
+  // Hotel room blocks: public details only.
+  // The booking links are NOT kept here (this file is public). They live in the Google Apps Script
+  // (HotelLinks.gs) and are sent back after someone RSVPs, and in their confirmation email.
+  var ROOM_BLOCK_DATES = 'Check in Tuesday, February 23 \u2192 check out Friday, February 26, 2027';
   var HOTELS = [
-    // {
-    //   name: 'Hotel name',
-    //   area: 'Pleasanton',
-    //   distance: '15 minutes from the venue',
-    //   rate: '$159 per night',
-    //   code: 'INDUVIVEK',
-    //   bookBy: 'January 24, 2027',
-    //   link: 'https://www.example.com/your-group-booking-link',
-    //   phone: '+1 925 555 0100',
-    //   note: 'Mention the Indu & Vivek wedding when calling.'
-    // },
+    { name: 'Courtyard by Marriott Newark Silicon Valley', rate: '$129 per night + tax', room: 'One king or two queen beds',
+      breakfast: 'Not included', parking: 'Free on-site parking', bookBy: 'Friday, January 22, 2027',
+      map: 'Courtyard by Marriott Newark Silicon Valley, Newark, CA' },
+    { name: 'Residence Inn Newark Silicon Valley', rate: '$155 per night + tax', room: 'One-bedroom suite: queen bed and a pull-out sofa',
+      breakfast: 'Breakfast buffet included (up to 4 people per room)', parking: 'Free parking', bookBy: 'Friday, January 29, 2027 (by 5 PM)',
+      map: 'Residence Inn Newark Silicon Valley, 35466 Dumbarton Court, Newark, CA' },
+    { name: 'Hyatt Place Newark', rate: '$154 (king) or $159 (two queens) per night + tax', room: 'King or two queen beds',
+      breakfast: 'Hot breakfast buffet included', parking: 'Free parking', bookBy: 'Saturday, January 23, 2027',
+      map: 'Hyatt Place Newark Silicon Valley, 5600 John Muir Dr, Newark, CA' }
   ];
   /* ========================================================== */
 
@@ -230,36 +229,25 @@
     var box = document.querySelector('[data-hotels]');
     if (!box || !HOTELS.length) return;
     var stay = document.querySelector('[data-stay-text]');
-    if (stay) stay.textContent = HOTELS.length > 1
-      ? 'We have reserved rooms at ' + (['', 'one', 'two', 'three', 'four', 'five', 'six'][HOTELS.length] || HOTELS.length) + ' hotels nearby. Use the booking code to get our group rate.'
-      : 'We have reserved rooms at a hotel nearby. Use the booking code to get our group rate.';
-    box.innerHTML = HOTELS.map(function (h, i) {
-      var tel = h.phone ? String(h.phone).replace(/[^\d+]/g, '') : '';
+    if (stay) stay.textContent = 'We have reserved rooms at ' + (['', 'one hotel', 'two hotels', 'three hotels', 'four hotels'][HOTELS.length] || HOTELS.length + ' hotels') +
+      ' in Newark at a special group rate. Your booking links will be in your RSVP confirmation email.';
+    var block = ROOM_BLOCK_DATES ? '<div class="block-dates"><span class="hotel-label">Wedding room block' + (HOTELS.length > 1 ? ', all hotels' : '') + '</span>' +
+      '<p><strong>' + hEsc(ROOM_BLOCK_DATES) + '</strong></p></div>' : '';
+    box.innerHTML = block + HOTELS.map(function (h) {
       return '<article class="hotel">' +
         '<h3>' + hEsc(h.name) + '</h3>' +
-        (h.area || h.distance ? '<p class="hotel-where">' + hEsc([h.area, h.distance].filter(Boolean).join(' · ')) + '</p>' : '') +
-        (h.rate ? '<p class="hotel-rate">' + hEsc(h.rate) + '</p>' : '') +
-        (h.code ? '<div class="hotel-code"><span class="hotel-label">Booking code</span>' +
-          '<span class="code" id="code-' + i + '">' + hEsc(h.code) + '</span>' +
-          '<button type="button" class="copy-btn" data-copy="code-' + i + '">Copy code</button></div>' : '') +
-        (h.bookBy ? '<p class="hotel-bookby">Please book by <strong>' + hEsc(h.bookBy) + '</strong></p>' : '') +
-        (h.note ? '<p class="hotel-note">' + hEsc(h.note) + '</p>' : '') +
-        '<div class="hotel-actions">' +
-        (h.link ? '<a class="btn" href="' + hEsc(h.link) + '" target="_blank" rel="noopener">Book online</a>' : '') +
-        (h.phone ? '<a class="link-btn" href="tel:' + hEsc(tel) + '">Call ' + hEsc(h.phone) + '</a>' : '') +
-        '</div></article>';
+        '<p class="hotel-rate">' + hEsc(h.rate) + '</p>' +
+        (h.room ? '<p class="hotel-room">' + hEsc(h.room) + '</p>' : '') +
+        '<dl class="hotel-facts">' +
+          (h.breakfast ? '<div><dt>Breakfast</dt><dd>' + hEsc(h.breakfast) + '</dd></div>' : '') +
+          (h.parking ? '<div><dt>Parking</dt><dd>' + hEsc(h.parking) + '</dd></div>' : '') +
+        '</dl>' +
+        (h.bookBy ? '<p class="hotel-bookby">Book by <strong>' + hEsc(h.bookBy) + '</strong></p>' : '') +
+        (h.map ? '<a class="link-btn" href="https://www.google.com/maps/search/?api=1&amp;query=' + encodeURIComponent(h.map) + '" target="_blank" rel="noopener">Open in Maps</a>' : '') +
+        '<p class="hotel-linknote">Your booking link is in your RSVP confirmation email.</p>' +
+        '</article>';
     }).join('');
     box.hidden = false;
-    box.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-copy]');
-      if (!b) return;
-      var el = document.getElementById(b.getAttribute('data-copy'));
-      var text = el.textContent;
-      function done() { b.textContent = 'Copied ✓'; setTimeout(function () { b.textContent = 'Copy code'; }, 2000); }
-      function selectIt() { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, selectIt);
-      else selectIt();
-    });
   }
 
   /* ---------- Deadline ---------- */
@@ -520,6 +508,16 @@
       '<p>' + (coming ? 'We can’t wait to celebrate with you.' : 'We’ll miss you, and we’re grateful you let us know.') + '</p>' +
       '<p class="conf-no">Confirmation number <strong>' + esc(lastId) + '</strong></p></div>' +
       reviewTable() +
+      (coming && lastHotelLinks.length ? '<section class="book-rooms"><h4>Book your hotel room</h4>' +
+        '<p>Use these links to get our group rate. They are also in your confirmation email.</p>' +
+        lastHotelLinks.map(function (h) {
+          var info = HOTELS.filter(function (x) { return x.name === h.name; })[0] || {};
+          var url = /^https:\/\//.test(String(h.url || '')) ? h.url : '';
+          if (!url) return '';
+          return '<div class="book-row"><div><strong>' + esc(h.name) + '</strong>' +
+            (info.rate ? '<span>' + esc(info.rate) + (info.bookBy ? ' \u00b7 book by ' + esc(info.bookBy) : '') + '</span>' : '') + '</div>' +
+            '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Book at our group rate</a></div>';
+        }).join('') + '</section>' : '') +
       '<p class="notice">We are emailing a copy to <strong>' + esc(state.email.trim()) + '</strong>. If you don’t see it in a few minutes, check your Spam or Promotions folder. You can also take a screenshot of this page.</p>' +
       (result === 'preview' ? '<p class="notice" style="margin-top:10px">Preview mode: this RSVP was not saved and no email was sent, because the Google Sheet is not connected yet.</p>' : '') +
       '<p class="hint" style="margin-top:14px">Need to change something? Fill out the RSVP again with the same email address and we’ll use your newest answer.</p>' +
@@ -528,6 +526,7 @@
 
   var lastResult = null;
   var lastId = '';
+  var lastHotelLinks = [];
   function render(focusTarget) {
     var body;
     if (state.step === 6) body = doneView(lastResult);
@@ -601,7 +600,7 @@
     if (!t) return;
     var action = t.dataset.action;
     if (action === 'back') { goTo(state.step - 1); return; }
-    if (action === 'restart') { state = freshState(); store(DRAFT_KEY, null); goTo(1); return; }
+    if (action === 'restart') { lastHotelLinks = []; state = freshState(); store(DRAFT_KEY, null); goTo(1); return; }
     if (action === 'fix-email') { state.email = emailFix(state.email); delete errors.email; render('#rsvp-email'); return; }
     if (t.dataset.side) {
       state.side = state.side === t.dataset.side ? '' : t.dataset.side;
@@ -684,7 +683,9 @@
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     }).then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.ok) finish('sent'); else fail(); })
+      .then(function (j) {
+        if (j && j.ok) { lastHotelLinks = Array.isArray(j.hotels) ? j.hotels : []; finish('sent'); } else fail();
+      })
       .catch(fail);
   }
 

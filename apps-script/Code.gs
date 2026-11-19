@@ -146,11 +146,14 @@ function doPost(e) {
         .concat([message, side]));
     sh.getRange(last + 1, 1, rows.length, HEADERS.length).setValues(rows);
 
-    const r = { id, name, email, phone, guests: cleanGuests, message, side, replaced };
+    const attending = cleanGuests.some(g => EVENTS.some(ev => g.rsvp[ev.id] === 'Yes'));
+    const hotels = attending ? hotelLinks() : [];
+    const r = { id, name, email, phone, guests: cleanGuests, message, side, replaced, hotels };
     sendOrQueue(id, email, 'Your RSVP for Indu & Vivek’s wedding (' + id + ')', guestEmailHtml(r));
     if (NOTIFY_EMAIL) sendOrQueue(id, NOTIFY_EMAIL, `${replaced ? 'Updated' : 'New'} RSVP: ${name} (${cleanGuests.length}) ${id}`, ownerEmailHtml(r));
 
-    return json({ ok: true, id: id, replaced: replaced, guests: rows.length });
+    if (hotels.length) markHotelLinksSent(email);
+    return json({ ok: true, id: id, replaced: replaced, guests: rows.length, hotels: hotels });
   } catch (err) {
     return json({ ok: false, error: String(err) });
   } finally {
@@ -213,6 +216,7 @@ function guestEmailHtml(r) {
     (r.side ? `<p><b>Side:</b> ${esc(r.side)}</p>` : '') +
     rsvpTable(r.guests) +
     (events.length ? '<p style="margin-top:20px">' + events.map(ev => `<b>${esc(ev.header)}</b><br>${esc(ev.when)}<br>${esc(ev.where)}`).join('<br><br>') + '</p>' : '') +
+    hotelSectionHtml(r.hotels) +
     `<p>Need to change something? Fill out the RSVP again at <a href="${SITE_URL}/#rsvp">${SITE_URL.replace('https://', '')}</a> using this same email address. We will use your newest answer.</p>` +
     '<p>With love,<br>Indu &amp; Vivek</p></div>';
 }
@@ -222,6 +226,69 @@ function ownerEmailHtml(r) {
     rsvpTable(r.guests) +
     (r.side ? `<p><b>Side:</b> ${esc(r.side)}</p>` : '') +
     (r.message ? `<p><b>Message:</b> ${esc(r.message)}</p>` : '');
+}
+
+// ---------- Hotel booking links ----------
+// The links are kept in a separate Apps Script file, HotelLinks.gs, that is NOT in the public
+// GitHub repository. It defines HOTEL_LINKS = [{ name, url }, ...]. Without it, no links are sent.
+function hotelLinks() {
+  if (typeof HOTEL_LINKS === 'undefined' || !Array.isArray(HOTEL_LINKS)) return [];
+  return HOTEL_LINKS
+    .filter(h => h && h.name && /^https:\/\//.test(String(h.url || '')))
+    .map(h => ({ name: String(h.name), url: String(h.url), note: String(h.note || '') }));
+}
+
+function hotelSectionHtml(hotels) {
+  if (!hotels || !hotels.length) return '';
+  return '<div style="margin:22px 0;padding:16px;border:2px solid #C88A12;border-radius:12px;background:#FBEBC4">' +
+    '<p style="margin:0 0 6px;font-size:18px"><b>Book your hotel room</b></p>' +
+    '<p style="margin:0 0 12px">Use these links to get our group rate for February 23 to 26, 2027.</p>' +
+    hotels.map(h =>
+      `<p style="margin:0 0 12px"><b>${esc(h.name)}</b>${h.note ? '<br>' + esc(h.note) : ''}<br>` +
+      `<a href="${esc(h.url)}" style="display:inline-block;margin-top:6px;padding:10px 18px;background:#7E1F1F;color:#fff;border-radius:999px;text-decoration:none">Book at our group rate</a></p>`
+    ).join('') + '</div>';
+}
+
+function markHotelLinksSent(email) {
+  const props = PropertiesService.getScriptProperties();
+  const sent = JSON.parse(props.getProperty('HOTEL_LINKS_SENT') || '[]');
+  if (sent.indexOf(email) === -1) { sent.push(email); props.setProperty('HOTEL_LINKS_SENT', JSON.stringify(sent)); }
+}
+
+/**
+ * Run this ONCE from the editor after adding HotelLinks.gs.
+ * Emails the hotel booking links to everyone who RSVP'd "attending" before the links existed.
+ * Anyone who already received them is skipped, so running it again is safe.
+ */
+function emailHotelLinksToEarlierGuests() {
+  const hotels = hotelLinks();
+  if (!hotels.length) throw new Error('No hotel links found. Add the HotelLinks.gs file first.');
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RESPONSES);
+  const last = sh.getLastRow();
+  if (last < 2) { console.log('No responses yet.'); return; }
+  const rows = sh.getRange(2, 1, last - 1, HEADERS.length).getValues();
+  const evCols = EVENTS.map((_, i) => 8 + i); // event columns, 0-based (I onward)
+  const people = {};
+  rows.forEach(r => {
+    if (r[2] !== 'Active') return;
+    const email = String(r[4]).trim().toLowerCase();
+    if (!isEmail(email)) return;
+    const p = people[email] || (people[email] = { name: r[3], id: r[1], attending: false });
+    if (evCols.some(c => r[c] === 'Yes')) p.attending = true;
+  });
+  const sent = JSON.parse(PropertiesService.getScriptProperties().getProperty('HOTEL_LINKS_SENT') || '[]');
+  let count = 0;
+  Object.keys(people).forEach(email => {
+    const p = people[email];
+    if (!p.attending || sent.indexOf(email) !== -1) return;
+    const html = '<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#34100F;max-width:600px">' +
+      `<p>Dear ${esc(p.name)},</p><p>Thank you for your RSVP! We have reserved rooms at a special group rate for our wedding guests.</p>` +
+      hotelSectionHtml(hotels) + '<p>With love,<br>Indu &amp; Vivek</p></div>';
+    sendOrQueue(p.id, email, 'Hotel booking links for Indu & Vivek’s wedding', html);
+    markHotelLinksSent(email);
+    count++;
+  });
+  console.log('Hotel links sent to ' + count + ' guest(s).');
 }
 
 // ---------- Helpers ----------
