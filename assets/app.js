@@ -24,13 +24,13 @@
   // The booking links are NOT kept here (this file is public). They live in the Google Apps Script
   // (HotelLinks.gs) and are sent back after someone RSVPs, and in their confirmation email.
   var HOTELS = [
-    { name: 'Courtyard by Marriott Newark Silicon Valley', rate: '$129 per night + tax', room: 'One king or two queen beds',
+    { name: 'Courtyard by Marriott Newark Silicon Valley', rate: '$129 per night + tax',
       breakfast: 'Not included', parking: 'Free on-site parking', bookBy: 'Friday, January 22, 2027',
       map: 'Courtyard by Marriott Newark Silicon Valley, Newark, CA' },
-    { name: 'Residence Inn Newark Silicon Valley', rate: '$155 per night + tax', room: 'One-bedroom suite: queen bed and a pull-out sofa',
-      breakfast: 'Breakfast buffet included (up to 4 people per room)', parking: 'Free parking', bookBy: 'Friday, January 29, 2027 (by 5 PM)',
+    { name: 'Residence Inn Newark Silicon Valley', rate: '$155 per night + tax',
+      breakfast: 'Breakfast buffet included (up to 4 people per room)', parking: 'Free parking', bookBy: 'Friday, January 29, 2027',
       map: 'Residence Inn Newark Silicon Valley, 35466 Dumbarton Court, Newark, CA' },
-    { name: 'Hyatt Place Newark', rate: '$154 (king) or $159 (two queens) per night + tax', room: 'King or two queen beds',
+    { name: 'Hyatt Place Newark', rate: '$154\u2013$159 per night + tax',
       breakfast: 'Hot breakfast buffet included', parking: 'Free parking', bookBy: 'Saturday, January 23, 2027',
       map: 'Hyatt Place Newark Silicon Valley, 5600 John Muir Dr, Newark, CA' }
   ];
@@ -224,27 +224,41 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  function tick(on, label) {
+    return '<li class="tick' + (on ? ' on' : '') + '"><span class="box" aria-hidden="true">' + (on ? '✓' : '') + '</span>' +
+      '<span>' + hEsc(label) + '<span class="sr"> ' + (on ? 'included' : 'not included') + '</span></span></li>';
+  }
   function initHotels() {
     var box = document.querySelector('[data-hotels]');
     if (!box || !HOTELS.length) return;
     var stay = document.querySelector('[data-stay-text]');
-    if (stay) stay.textContent = 'We\u2019ve arranged a special group rate at ' + (['', 'one hotel', 'two hotels', 'three hotels', 'four hotels'][HOTELS.length] || HOTELS.length + ' hotels') +
+    if (stay) stay.textContent = 'We’ve arranged a special group rate at ' + (['', 'one hotel', 'two hotels', 'three hotels'][HOTELS.length] || HOTELS.length + ' hotels') +
       ' in Newark. Your booking links will be in your RSVP confirmation email.';
-    box.innerHTML = HOTELS.map(function (h) {
-      return '<article class="hotel">' +
-        '<h3>' + hEsc(h.name) + '</h3>' +
-        '<p class="hotel-rate">' + hEsc(h.rate) + '</p>' +
-        (h.room ? '<p class="hotel-room">' + hEsc(h.room) + '</p>' : '') +
-        '<dl class="hotel-facts">' +
-          (h.breakfast ? '<div><dt>Breakfast</dt><dd>' + hEsc(h.breakfast) + '</dd></div>' : '') +
-          (h.parking ? '<div><dt>Parking</dt><dd>' + hEsc(h.parking) + '</dd></div>' : '') +
-        '</dl>' +
-        (h.bookBy ? '<p class="hotel-bookby">Book by <strong>' + hEsc(h.bookBy) + '</strong></p>' : '') +
-        (h.map ? '<a class="link-btn" href="https://www.google.com/maps/search/?api=1&amp;query=' + encodeURIComponent(h.map) + '" target="_blank" rel="noopener">Open in Maps</a>' : '') +
-        '<p class="hotel-linknote">Your booking link is in your RSVP confirmation email.</p>' +
+    box.innerHTML = '<div class="carousel" tabindex="0" aria-label="Hotels">' + HOTELS.map(function (h, i) {
+      var hasBreakfast = !/not included/i.test(h.breakfast || '');
+      var hasParking = /free/i.test(h.parking || '');
+      return '<article class="hcard" aria-label="Hotel ' + (i + 1) + ' of ' + HOTELS.length + '">' +
+        '<h4>' + hEsc(h.name) + '</h4>' +
+        '<p class="hc-rate">' + hEsc(h.rate) + '</p>' +
+        (h.room ? '<p class="hc-room">' + hEsc(h.room) + '</p>' : '') +
+        '<ul class="ticks">' + tick(hasBreakfast, 'Breakfast') + tick(hasParking, 'Free parking') + '</ul>' +
+        '<p class="hc-by">Book by <strong>' + hEsc(h.bookBy) + '</strong></p>' +
+        '<a class="hc-map" href="https://www.google.com/maps/search/?api=1&amp;query=' + encodeURIComponent(h.map) + '" target="_blank" rel="noopener">Open in Maps</a>' +
         '</article>';
-    }).join('');
+    }).join('') + '</div>' +
+    '<div class="car-nav"><button type="button" class="car-btn" data-dir="-1" aria-label="Previous hotel">←</button>' +
+    '<span class="dots">' + HOTELS.map(function (_, i) { return '<i data-i="' + i + '"' + (i ? '' : ' class="on"') + '></i>'; }).join('') + '</span>' +
+    '<button type="button" class="car-btn" data-dir="1" aria-label="Next hotel">→</button></div>' +
+    '<p class="swipe-hint">Swipe to see all ' + HOTELS.length + ' hotels</p>';
     box.hidden = false;
+    var car = box.querySelector('.carousel'), dots = box.querySelectorAll('.dots i');
+    function current() { var w = car.firstElementChild.getBoundingClientRect().width + 14; return Math.round(car.scrollLeft / w); }
+    car.addEventListener('scroll', function () { var c = current(); for (var k = 0; k < dots.length; k++) dots[k].className = k === c ? 'on' : ''; }, { passive: true });
+    box.addEventListener('click', function (e) {
+      var bt = e.target.closest('.car-btn'); if (!bt) return;
+      var w = car.firstElementChild.getBoundingClientRect().width + 14;
+      car.scrollBy({ left: w * Number(bt.dataset.dir), behavior: 'smooth' });
+    });
   }
 
   /* ---------- Deadline ---------- */
