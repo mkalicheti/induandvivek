@@ -41,8 +41,9 @@ How the sheet works:
 
 The hotel cards on the website show rates, room types, breakfast, parking and book-by dates,
 but **no booking links**: this repository is public, and the hotels don't check who books.
-The links are sent only after someone RSVPs as attending: on the thank-you screen and in the
-confirmation email.
+The RSVP form asks attending guests whether they want hotel booking links. Only guests who
+answer Yes get them: on the thank-you screen and in the confirmation email. Their answer is
+saved in the **Hotel links** column of the Sheet.
 
 The links live in a second Apps Script file that is **not** in this repository:
 
@@ -51,8 +52,8 @@ The links live in a second Apps Script file that is **not** in this repository:
    The hotel names must match the names in `assets/app.js` (`HOTELS`).
 3. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.**
 4. Once only: choose `emailHotelLinksToEarlierGuests` in the function dropdown and press **Run**.
-   It emails the links to everyone who RSVP'd as attending before the links were added
-   (people who already got them are skipped).
+   It emails the links to everyone who RSVP'd as attending before the question existed
+   (people who already got them, or who answered No, are skipped).
 
 The public hotel details are edited in `HOTELS` at the top of `assets/app.js`.
 

@@ -30,7 +30,7 @@ const LATEST = 'Guest List (latest)';
 const QUEUE = 'Email Queue';
 const HEADERS = ['Submitted At', 'Confirmation #', 'Status', 'Contact Name', 'Email', 'Mobile', 'Guest Name', 'Adult/Child']
   .concat(EVENTS.map(e => e.header))
-  .concat(['Message', 'Side']);
+  .concat(['Message', 'Side', 'Hotel links']);
 const COL = { status: 3, email: 5 };
 const QUEUE_HEADERS = ['Queued At', 'Confirmation #', 'To', 'Subject', 'Body (HTML)', 'Status', 'Sent At', 'Last Error'];
 
@@ -68,7 +68,9 @@ function setup() {
   rows.push(['RSVPs received (families)', `=IFERROR(COUNTUNIQUE(FILTER(${r}B2:B,${r}C2:C="Active")),0)`, '', '', '']);
   rows.push(['Guests listed', `=COUNTIF(${r}C:C,"Active")`, '', '', '']);
   rows.push(['Confirmation emails waiting', `=COUNTIF('${QUEUE}'!F:F,"Pending")`, '', '', '']);
-  const sc = colLetter(HEADERS.length); // Side column
+  const hc = colLetter(HEADERS.length); // Hotel links column
+  rows.push(['RSVPs that want hotel links', `=IFERROR(COUNTUNIQUE(FILTER(${r}B2:B,${r}C2:C="Active",${r}${hc}2:${hc}="Yes")),0)`, '', '', '']);
+  const sc = colLetter(HEADERS.length - 1); // Side column
   rows.push(['', '', '', '', '']);
   rows.push(['Guests by side', 'Guests listed', '', '', '']);
   ['Indu\u2019s side (bride)', 'Vivek\u2019s side (groom)', 'Both'].forEach(s =>
@@ -135,6 +137,7 @@ function doPost(e) {
     const id = clean(data.submissionId, 20) || ('IV-' + Utilities.getUuid().slice(0, 6).toUpperCase());
     const message = clean(data.message, 2000);
     const side = clean(data.side, 40);
+    const wantsHotel = data.wantsHotelLinks === true;
     const cleanGuests = guests.map(g => ({
       name: clean(g.name, 120),
       type: g.type === 'Child' ? 'Child' : 'Adult',
@@ -143,11 +146,11 @@ function doPost(e) {
     const rows = cleanGuests.map(g =>
       [now, id, 'Active', name, email, phone, g.name, g.type]
         .concat(EVENTS.map(ev => g.rsvp[ev.id]))
-        .concat([message, side]));
+        .concat([message, side, wantsHotel ? 'Yes' : 'No']));
     sh.getRange(last + 1, 1, rows.length, HEADERS.length).setValues(rows);
 
     const attending = cleanGuests.some(g => EVENTS.some(ev => g.rsvp[ev.id] === 'Yes'));
-    const hotels = attending ? hotelLinks() : [];
+    const hotels = attending && wantsHotel ? hotelLinks() : [];
     const r = { id, name, email, phone, guests: cleanGuests, message, side, replaced, hotels };
     sendOrQueue(id, email, 'Your RSVP for Indu & Vivek’s wedding (' + id + ')', guestEmailHtml(r));
     if (NOTIFY_EMAIL) sendOrQueue(id, NOTIFY_EMAIL, `${replaced ? 'Updated' : 'New'} RSVP: ${name} (${cleanGuests.length}) ${id}`, ownerEmailHtml(r));
@@ -273,14 +276,15 @@ function emailHotelLinksToEarlierGuests() {
     if (r[2] !== 'Active') return;
     const email = String(r[4]).trim().toLowerCase();
     if (!isEmail(email)) return;
-    const p = people[email] || (people[email] = { name: r[3], id: r[1], attending: false });
+    const p = people[email] || (people[email] = { name: r[3], id: r[1], attending: false, saidNo: false });
+    if (r[HEADERS.length - 1] === 'No') p.saidNo = true;
     if (evCols.some(c => r[c] === 'Yes')) p.attending = true;
   });
   const sent = JSON.parse(PropertiesService.getScriptProperties().getProperty('HOTEL_LINKS_SENT') || '[]');
   let count = 0;
   Object.keys(people).forEach(email => {
     const p = people[email];
-    if (!p.attending || sent.indexOf(email) !== -1) return;
+    if (!p.attending || p.saidNo || sent.indexOf(email) !== -1) return;
     const html = '<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#34100F;max-width:600px">' +
       `<p>Dear ${esc(p.name)},</p><p>Thank you for your RSVP! We have reserved rooms at a special group rate for our wedding guests.</p>` +
       hotelSectionHtml(hotels) + '<p>With love,<br>Indu &amp; Vivek</p></div>';

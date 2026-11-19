@@ -261,13 +261,13 @@
 
   /* ---------- RSVP state ---------- */
   var DRAFT_KEY = 'iv-rsvp-draft-v1';
-  var STEPS = ['Your details', 'Who is coming', 'Events', 'Message', 'Review'];
+  var STEPS = ['Your details', 'Who is coming', 'Events', 'Hotel & message', 'Review'];
   var app = document.getElementById('rsvp-app');
   var counter = 0;
   function newId() { counter += 1; return 'p' + Date.now().toString(36) + counter; }
 
   function freshState() {
-    return { step: 1, name: '', phoneCode: '+91', phone: '', email: '', emailChecked: '', website: '', people: [{ id: 'me', name: '', child: false }], confirmed: false, rsvp: {}, message: '', side: '' };
+    return { step: 1, name: '', phoneCode: '+91', phone: '', email: '', emailChecked: '', website: '', people: [{ id: 'me', name: '', child: false }], confirmed: false, rsvp: {}, message: '', side: '', hotel: '' };
   }
   function loadDraft() {
     try {
@@ -276,6 +276,7 @@
         if (!(s.step >= 1 && s.step <= 5)) s.step = 1;
         if (!s.phoneCode) s.phoneCode = '+91';
         if (!s.side) s.side = '';
+        if (!s.hotel) s.hotel = '';
         return s;
       }
     } catch (e) { /* ignore */ }
@@ -467,8 +468,19 @@
       '<p class="step-intro">Choose an answer for each person.</p>' + blocks + nav('Next →');
   }
 
+  function isComing() {
+    return state.people.some(function (p) { return EVENTS.some(function (ev) { return state.rsvp[p.id] && state.rsvp[p.id][ev.id] === 'yes'; }); });
+  }
+  function wantsHotel() { return isComing() && HOTELS.length > 0 && state.hotel === 'yes'; }
+
   function step4() {
-    return '<h3 class="step-title">A message for us</h3>' +
+    var hotelQ = isComing() && HOTELS.length ? '<fieldset class="side hotel-q"><legend>Would you like links to book a hotel room at our group rate?</legend>' +
+      '<p class="hint">We have reserved rooms in Newark for February 23 to 26. If you choose Yes, we will show you the booking links after you send your RSVP, and email them to you.</p>' +
+      '<div class="yn">' +
+      '<button type="button" class="choice" data-hotel="yes" data-v="yes" aria-pressed="' + (state.hotel === 'yes') + '">✓ Yes, send me the links</button>' +
+      '<button type="button" class="choice" data-hotel="no" data-v="no" aria-pressed="' + (state.hotel === 'no') + '">✕ No, thanks</button>' +
+      '</div></fieldset>' : '';
+    return '<h3 class="step-title">' + (hotelQ ? 'Hotel &amp; message' : 'A message for us') + '</h3>' + hotelQ +
       '<div class="field"><label for="rsvp-message">A message for Indu &amp; Vivek (optional)</label>' +
       '<textarea id="rsvp-message" data-field="message">' + esc(state.message) + '</textarea></div>' +
       nav('Review my RSVP →');
@@ -493,6 +505,7 @@
       reviewTable() +
       '<p style="margin-bottom:16px"><button type="button" class="edit-link" data-goto="2">Change who is coming</button> &nbsp;·&nbsp; <button type="button" class="edit-link" data-goto="3">Change answers</button></p>' +
       '<dl class="summary-list">' +
+      (isComing() && HOTELS.length ? '<div><dt>Hotel booking links</dt><dd>' + (state.hotel === 'yes' ? 'Yes, please' : 'No, thanks') + ' <button type="button" class="edit-link" data-goto="4">Change</button></dd></div>' : '') +
       (state.side ? '<div><dt>Side</dt><dd>' + esc(sideLabel(state.side)) + ' <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' : '') +
       '<div><dt>Confirmation email to</dt><dd><strong>' + esc(state.email.trim()) + '</strong> <button type="button" class="edit-link" data-goto="1">Change</button></dd></div>' +
       (fullPhone() ? '<div><dt>Mobile</dt><dd>' + esc(fullPhone()) + '</dd></div>' : '') +
@@ -508,7 +521,7 @@
       '<p>' + (coming ? 'We can’t wait to celebrate with you.' : 'We’ll miss you, and we’re grateful you let us know.') + '</p>' +
       '<p class="conf-no">Confirmation number <strong>' + esc(lastId) + '</strong></p></div>' +
       reviewTable() +
-      (coming && lastHotelLinks.length ? '<section class="book-rooms"><h4>Book your hotel room</h4>' +
+      (coming && state.hotel === 'yes' && lastHotelLinks.length ? '<section class="book-rooms"><h4>Book your hotel room</h4>' +
         '<p>Use these links to get our group rate. They are also in your confirmation email.</p>' +
         lastHotelLinks.map(function (h) {
           var info = HOTELS.filter(function (x) { return x.name === h.name; })[0] || {};
@@ -602,6 +615,13 @@
     if (action === 'back') { goTo(state.step - 1); return; }
     if (action === 'restart') { lastHotelLinks = []; state = freshState(); store(DRAFT_KEY, null); goTo(1); return; }
     if (action === 'fix-email') { state.email = emailFix(state.email); delete errors.email; render('#rsvp-email'); return; }
+    if (t.dataset.hotel) {
+      state.hotel = t.dataset.hotel;
+      var hb = app.querySelectorAll('[data-hotel]');
+      for (var hi = 0; hi < hb.length; hi++) hb[hi].setAttribute('aria-pressed', String(hb[hi] === t));
+      saveDraft();
+      return;
+    }
     if (t.dataset.side) {
       state.side = state.side === t.dataset.side ? '' : t.dataset.side;
       var sb = app.querySelectorAll('.side-btn');
@@ -661,6 +681,7 @@
       }),
       message: state.message.trim(),
       side: sideLabel(state.side),
+      wantsHotelLinks: wantsHotel(),
       website: state.website
     };
 

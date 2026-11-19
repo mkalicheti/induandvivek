@@ -478,3 +478,7 @@ body.has-picker { padding-bottom: 120px; }
 .book-row div { display: grid; gap: 2px; }
 .book-row span { font-size: .92rem; color: var(--muted); }
 .book-row .btn { min-height: 50px; font-size: 1rem; }
+
+/* "Would you like hotel links?" (RSVP step 4) */
+.hotel-q .hint { margin-bottom: 10px; }
+.yn { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
