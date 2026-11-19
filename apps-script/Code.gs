@@ -245,7 +245,7 @@ function hotelSectionHtml(hotels) {
   if (!hotels || !hotels.length) return '';
   return '<div style="margin:22px 0;padding:16px;border:2px solid #C88A12;border-radius:12px;background:#FBEBC4">' +
     '<p style="margin:0 0 6px;font-size:18px"><b>Book your hotel room</b></p>' +
-    '<p style="margin:0 0 12px">Use these links to get our group rate for February 23 to 26, 2027.</p>' +
+    '<p style="margin:0 0 12px">Use these links to book your room at our group rate.</p>' +
     hotels.map(h =>
       `<p style="margin:0 0 12px"><b>${esc(h.name)}</b>${h.note ? '<br>' + esc(h.note) : ''}<br>` +
       `<a href="${esc(h.url)}" style="display:inline-block;margin-top:6px;padding:10px 18px;background:#7E1F1F;color:#fff;border-radius:999px;text-decoration:none">Book at our group rate</a></p>`
@@ -286,7 +286,7 @@ function emailHotelLinksToEarlierGuests() {
     const p = people[email];
     if (!p.attending || p.saidNo || sent.indexOf(email) !== -1) return;
     const html = '<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#34100F;max-width:600px">' +
-      `<p>Dear ${esc(p.name)},</p><p>Thank you for your RSVP! We have reserved rooms at a special group rate for our wedding guests.</p>` +
+      `<p>Dear ${esc(p.name)},</p><p>Thank you for your RSVP! We\u2019ve arranged a special group rate at a few hotels nearby for our wedding guests.</p>` +
       hotelSectionHtml(hotels) + '<p>With love,<br>Indu &amp; Vivek</p></div>';
     sendOrQueue(p.id, email, 'Hotel booking links for Indu & Vivek’s wedding', html);
     markHotelLinksSent(email);

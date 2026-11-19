@@ -23,7 +23,6 @@
   // Hotel room blocks: public details only.
   // The booking links are NOT kept here (this file is public). They live in the Google Apps Script
   // (HotelLinks.gs) and are sent back after someone RSVPs, and in their confirmation email.
-  var ROOM_BLOCK_DATES = 'Check in Tuesday, February 23 \u2192 check out Friday, February 26, 2027';
   var HOTELS = [
     { name: 'Courtyard by Marriott Newark Silicon Valley', rate: '$129 per night + tax', room: 'One king or two queen beds',
       breakfast: 'Not included', parking: 'Free on-site parking', bookBy: 'Friday, January 22, 2027',
@@ -229,11 +228,9 @@
     var box = document.querySelector('[data-hotels]');
     if (!box || !HOTELS.length) return;
     var stay = document.querySelector('[data-stay-text]');
-    if (stay) stay.textContent = 'We have reserved rooms at ' + (['', 'one hotel', 'two hotels', 'three hotels', 'four hotels'][HOTELS.length] || HOTELS.length + ' hotels') +
-      ' in Newark at a special group rate. Your booking links will be in your RSVP confirmation email.';
-    var block = ROOM_BLOCK_DATES ? '<div class="block-dates"><span class="hotel-label">Wedding room block' + (HOTELS.length > 1 ? ', all hotels' : '') + '</span>' +
-      '<p><strong>' + hEsc(ROOM_BLOCK_DATES) + '</strong></p></div>' : '';
-    box.innerHTML = block + HOTELS.map(function (h) {
+    if (stay) stay.textContent = 'We\u2019ve arranged a special group rate at ' + (['', 'one hotel', 'two hotels', 'three hotels', 'four hotels'][HOTELS.length] || HOTELS.length + ' hotels') +
+      ' in Newark. Your booking links will be in your RSVP confirmation email.';
+    box.innerHTML = HOTELS.map(function (h) {
       return '<article class="hotel">' +
         '<h3>' + hEsc(h.name) + '</h3>' +
         '<p class="hotel-rate">' + hEsc(h.rate) + '</p>' +
@@ -475,7 +472,7 @@
 
   function step4() {
     var hotelQ = isComing() && HOTELS.length ? '<fieldset class="side hotel-q"><legend>Would you like links to book a hotel room at our group rate?</legend>' +
-      '<p class="hint">We have reserved rooms in Newark for February 23 to 26. If you choose Yes, we will show you the booking links after you send your RSVP, and email them to you.</p>' +
+      '<p class="hint">We\u2019ve arranged a special group rate at hotels in Newark. If you choose Yes, we will show you the booking links after you send your RSVP, and email them to you.</p>' +
       '<div class="yn">' +
       '<button type="button" class="choice" data-hotel="yes" data-v="yes" aria-pressed="' + (state.hotel === 'yes') + '">✓ Yes, send me the links</button>' +
       '<button type="button" class="choice" data-hotel="no" data-v="no" aria-pressed="' + (state.hotel === 'no') + '">✕ No, thanks</button>' +
